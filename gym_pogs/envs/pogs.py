@@ -99,6 +99,8 @@ class POGSEnv(gym.Env):
         self.steps_taken += 1
 
         done = False
+        reward = 0
+
         # Check if action is valid (can only move to connected nodes that are observable)
         if action not in self.graph.neighbors(self.current_node):
             reward = -1.0  # Penalty for invalid move
