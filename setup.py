@@ -7,7 +7,7 @@ with open("README.md", "r") as f:
 setup(
     # Information
     name="gym-pogs",
-    description="Partially Observable Graph Search",
+    description="Partially Observable Graph Search (POGS) environment for OpenAI Gym",
     long_description=long_description,
     long_description_content_type="text/markdown",
     version="0.1.0",
@@ -18,6 +18,8 @@ setup(
     install_requires=[
         "gym ~= 0.23",
         "networkx",
+        "numpy",
+        "matplotlib",
     ],
     extras_require={
         "dev": [
