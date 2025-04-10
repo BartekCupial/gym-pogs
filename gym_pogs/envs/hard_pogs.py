@@ -8,7 +8,7 @@ class HardPOGS(gym.Wrapper):
         super().__init__(env)
 
         self.min_backtracks = min_backtracks
-        self.agent = MemorySymbolicPOGSAgent()
+        self.agent = MemorySymbolicPOGSAgent(self.env.k_nearest)
 
     def reset(self, **kwargs):
         backtrack_count = 0
@@ -18,7 +18,7 @@ class HardPOGS(gym.Wrapper):
 
             self.env.seed(seed)
             obs = super().reset(**kwargs)
-            self.agent.reset(obs)
+            self.agent.reset()
 
             done = False
             while not done:

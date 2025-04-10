@@ -3,40 +3,21 @@ from typing import List
 import networkx as nx
 import numpy as np
 
-from gym_pogs.utils.networkx import find_furthest_node
-
 
 class MemorySymbolicPOGSAgent:
-    def __init__(self):
-        """Initialize the symbolic agent for POGS environment."""
+    def __init__(self, k_nearest):
+        self.radius = k_nearest
+
         self.known_graph: nx.Graph = None
         self.current_node: int = None
         self.target_node: int = None
         self.path_to_target: List[int] = None
 
-    def reset(self, observation):
-        """Reset the agent's knowledge when the environment resets."""
+    def reset(self):
         # Initialize a new graph with the number of nodes from the observation
         self.known_graph = nx.Graph()
         self.visited_nodes = set()
         self.explored_nodes = set()
-
-        # Add all possible nodes
-        num_nodes = int(np.sqrt(len(observation["vector"]) - 2))
-        for i in range(num_nodes):
-            self.known_graph.add_node(i)
-
-        # Extract current and target nodes
-        self.current_node = observation["current_node"]
-        self.target_node = observation["target_node"]
-
-        # Update the known graph with observable edges
-        self._update_known_graph(observation)
-
-        furthest_node, distance = find_furthest_node(self.known_graph, self.current_node)
-        self.radius = distance
-
-        self._update_effectively_explored_nodes()
 
         self.path_to_target = None
         self.path_to_explore = None
@@ -55,6 +36,7 @@ class MemorySymbolicPOGSAgent:
         # Update current node
         self.previous_node = self.current_node  # Store previous node before updating
         self.current_node = observation["current_node"]
+        self.target_node = observation["target_node"]
 
         # Check for backtracking
         # If we moved to a previously visited node, that's backtracking
@@ -70,6 +52,11 @@ class MemorySymbolicPOGSAgent:
         for i in range(num_nodes):
             for j in range(num_nodes):
                 if adj_matrix[i, j] > 0:
+                    if i not in self.known_graph:
+                        self.known_graph.add_node(i)
+                    if j not in self.known_graph:
+                        self.known_graph.add_node(j)
+
                     self.known_graph.add_edge(i, j)
 
     def _update_effectively_explored_nodes(self):
@@ -118,15 +105,9 @@ class MemorySymbolicPOGSAgent:
         assert len(path) > 0
         return path
 
-    def _follow_path(self, path_attribute_name):
-        # If we have a path, take the next step
-        path = getattr(self, path_attribute_name)
-        if path and len(path) > 0:
-            next_node = path[0]
-            setattr(self, path_attribute_name, path[1:])
-            return next_node
-        else:
-            return None
+    def _is_node_within_radius(self, node):
+        """Check if a node is within the exploration radius."""
+        return nx.shortest_path_length(self.known_graph, self.current_node, node) <= self.radius - 1
 
     def act(self, observation):
         """Determine the next action based on the current observation."""
@@ -134,20 +115,28 @@ class MemorySymbolicPOGSAgent:
         self._update_known_graph(observation)
         self._update_effectively_explored_nodes()
 
-        # Recompute path if needed
+        # Try to find a path to target
         if self.path_to_target is None:
-            assert (
-                self.path_to_target is None or len(self.path_to_target) > 0
-            ), "if path to target == 0, we should be on target"
             self.path_to_target = self._compute_target_path()
             if self.path_to_target:
                 self.path_to_explore = None
 
-        next_node = self._follow_path("path_to_target")
-        if next_node is not None:
+        # If we have a path to target, follow it
+        if self.path_to_target:
+            next_node = self.path_to_target[0]
+            self.path_to_target = self.path_to_target[1:]
             return next_node
 
-        if self.path_to_explore is None or len(self.path_to_explore) == 0:
+        # If we don't have an exploration path or the current exploration target is within radius, recompute
+        if self.path_to_explore is None or (
+            self.path_to_explore and self._is_node_within_radius(self.path_to_explore[-1])
+        ):
             self.path_to_explore = self._compute_explore_path()
 
-        return self._follow_path("path_to_explore")
+        # Follow the exploration path
+        if self.path_to_explore:
+            next_node = self.path_to_explore[0]
+            self.path_to_explore = self.path_to_explore[1:]
+            return next_node
+
+        assert False, "No valid path found"
