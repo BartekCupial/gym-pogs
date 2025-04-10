@@ -1,3 +1,5 @@
+from typing import List
+
 import networkx as nx
 import numpy as np
 
@@ -7,10 +9,10 @@ from gym_pogs.utils.networkx import find_furthest_node
 class MemorySymbolicPOGSAgent:
     def __init__(self):
         """Initialize the symbolic agent for POGS environment."""
-        self.known_graph = None
-        self.current_node = None
-        self.target_node = None
-        self.path_to_target = None
+        self.known_graph: nx.Graph = None
+        self.current_node: int = None
+        self.target_node: int = None
+        self.path_to_target: List[int] = None
 
     def reset(self, observation):
         """Reset the agent's knowledge when the environment resets."""
@@ -26,13 +28,16 @@ class MemorySymbolicPOGSAgent:
         # Extract current and target nodes
         self.current_node = observation["current_node"]
         self.target_node = observation["target_node"]
-        self.visited_nodes.add(self.current_node)
 
         # Update the known graph with observable edges
         self._update_known_graph(observation)
 
         furthest_node, distance = find_furthest_node(self.known_graph, self.current_node)
         self.radius = distance
+
+        # self.visited_nodes.add(self.current_node)
+
+        self._update_effectively_explored_nodes()
 
         self.path_to_target = None
         self.path_to_explore = None
@@ -53,6 +58,13 @@ class MemorySymbolicPOGSAgent:
             for j in range(num_nodes):
                 if adj_matrix[i, j] > 0:
                     self.known_graph.add_edge(i, j)
+
+    def _update_effectively_explored_nodes(self):
+        assert self.radius
+
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+        effectively_explored_nodes = {node for node, length in path_lengths.items() if length <= self.radius - 1}
+        self.visited_nodes.update(effectively_explored_nodes)
 
     def _compute_target_path(self):
         """Compute the path to the target using the known graph."""
@@ -98,7 +110,7 @@ class MemorySymbolicPOGSAgent:
         """Determine the next action based on the current observation."""
         # Update knowledge with new observation
         self._update_known_graph(observation)
-        self.visited_nodes.add(self.current_node)
+        self._update_effectively_explored_nodes()
 
         # Recompute path if needed
         if self.path_to_target is None:
