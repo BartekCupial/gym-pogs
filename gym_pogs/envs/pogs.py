@@ -84,6 +84,7 @@ class POGSEnv(gym.Env):
         self.graph: nx.Graph = self._generate_graph()
         self.current_node = self._choose_current_node()
         self.target_node = self._choose_target_node()
+        self.pos = nx.spring_layout(self.graph)  # for rendering
 
         # Reset step counter and visited nodes
         self.steps_taken = 0
@@ -186,7 +187,6 @@ class POGSEnv(gym.Env):
 
     def render(self, mode="human"):
         G = self.graph
-        pos = nx.spring_layout(G)
 
         # Create a list of node colors
         color_map = ["black"] * len(G.nodes())
@@ -198,20 +198,20 @@ class POGSEnv(gym.Env):
 
         # Draw observable nodes with bigger gray circles
         observable_nodes = self._get_observable_nodes()
-        nx.draw_networkx_nodes(G, pos, nodelist=observable_nodes, node_color="#FFD700", node_size=1500, alpha=0.3)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=observable_nodes, node_color="#FFD700", node_size=1500, alpha=0.3)
 
         # Draw all nodes
-        nx.draw_networkx_nodes(G, pos, node_color="black", node_size=500)
+        nx.draw_networkx_nodes(G, self.pos, node_color="black", node_size=500)
 
         # Draw target and current nodes
-        nx.draw_networkx_nodes(G, pos, nodelist=[self.target_node], node_color="blue", node_size=500)
-        nx.draw_networkx_nodes(G, pos, nodelist=[self.current_node], node_color="red", node_size=500)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.target_node], node_color="blue", node_size=500)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.current_node], node_color="red", node_size=500)
 
         # Draw edges
-        nx.draw_networkx_edges(G, pos)
+        nx.draw_networkx_edges(G, self.pos)
 
         # Draw labels
-        nx.draw_networkx_labels(G, pos, font_color="white", font_weight="bold")
+        nx.draw_networkx_labels(G, self.pos, font_color="white", font_weight="bold")
 
         plt.tight_layout()
 
