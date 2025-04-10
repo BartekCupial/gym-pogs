@@ -176,7 +176,7 @@ class POGSEnv(gym.Env):
         edge_list = list(self.observable_edges)
 
         if self.undirected:
-            edge_list = set(sorted(edge_list, key=lambda x: (x[0], x[1])))
+            edge_list = set(map(tuple, map(sorted, edge_list)))
 
         return {
             "vector": vector,

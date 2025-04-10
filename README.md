@@ -64,7 +64,7 @@ observation
        dtype=float32),
  'current_node': np.int64(6),
  'target_node': np.int64(1),
- 'edge_list': {(3, 9), (4, 9), (6, 9), (9, 3), (9, 4), (9, 6)}}
+ 'edge_list': {(3, 9), (4, 9), (6, 9)}}
 ```
 
 ### Installation 
