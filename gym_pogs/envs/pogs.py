@@ -224,7 +224,12 @@ class POGSEnv(gym.Env):
         buf.seek(0)
         img = Image.open(buf)
 
-        return img
+        img_array = np.array(img)
+
+        # Convert to 2D array by averaging the RGB channels (removing alpha)
+        img_2d = img_array[:, :, :3]
+
+        return img_2d
 
 
 class MinDistancePOGS(POGSEnv):
