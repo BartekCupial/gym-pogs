@@ -95,15 +95,24 @@ class MemorySymbolicPOGSAgent:
     def _compute_explore_path(self):
         self.explore_count += 1
 
-        unvisited_nodes = set(self.known_graph.nodes()) - self.explored_nodes
-        assert len(unvisited_nodes) > 0, "graph should be solvable"
-        furthest_unvisited_node, _ = find_furthest_node(self.known_graph, self.current_node, nodes=unvisited_nodes)
+        # Find nodes that are just outside our exploration radius
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+
+        # Find nodes that are outside our explored radius but still known
+        frontier_nodes = {node for node in self.known_graph.nodes() if node not in self.explored_nodes}
+
+        if not frontier_nodes:
+            assert False, "graph should be solvable"
+
+        # Find the closest node among the frontier nodes
+        closest_frontier_node = min(frontier_nodes, key=lambda node: path_lengths.get(node, float("inf")))
 
         path = nx.shortest_path(
             self.known_graph,
             source=self.current_node,
-            target=furthest_unvisited_node,
+            target=closest_frontier_node,
         )
+
         # Remove the current node from the path
         path = path[1:]
         assert len(path) > 0
