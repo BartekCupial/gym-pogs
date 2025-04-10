@@ -19,6 +19,7 @@ class MemorySymbolicPOGSAgent:
         # Initialize a new graph with the number of nodes from the observation
         self.known_graph = nx.Graph()
         self.visited_nodes = set()
+        self.explored_nodes = set()
 
         # Add all possible nodes
         num_nodes = int(np.sqrt(len(observation["vector"]) - 2))
@@ -35,14 +36,15 @@ class MemorySymbolicPOGSAgent:
         furthest_node, distance = find_furthest_node(self.known_graph, self.current_node)
         self.radius = distance
 
-        # self.visited_nodes.add(self.current_node)
-
         self._update_effectively_explored_nodes()
 
         self.path_to_target = None
         self.path_to_explore = None
 
-        self.num_explore_paths = 0
+        self.explore_count = 0
+        self.backtrack_count = 0
+        self.backtracking = False
+        self.previous_node = None
 
     def _update_known_graph(self, observation):
         """Update the agent's knowledge of the graph based on observation."""
@@ -51,7 +53,18 @@ class MemorySymbolicPOGSAgent:
         adj_matrix = observation["vector"][:-2].reshape(num_nodes, num_nodes)
 
         # Update current node
+        self.previous_node = self.current_node  # Store previous node before updating
         self.current_node = observation["current_node"]
+
+        # Check for backtracking
+        # If we moved to a previously visited node, that's backtracking
+        if self.current_node in self.visited_nodes and not self.backtracking:
+            self.backtrack_count += 1
+            self.backtracking = True
+        elif self.current_node not in self.visited_nodes:
+            self.backtracking = False
+
+        self.visited_nodes.add(self.current_node)
 
         # Add edges from the adjacency matrix to the known graph
         for i in range(num_nodes):
@@ -64,7 +77,7 @@ class MemorySymbolicPOGSAgent:
 
         path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
         effectively_explored_nodes = {node for node, length in path_lengths.items() if length <= self.radius - 1}
-        self.visited_nodes.update(effectively_explored_nodes)
+        self.explored_nodes.update(effectively_explored_nodes)
 
     def _compute_target_path(self):
         """Compute the path to the target using the known graph."""
@@ -80,9 +93,9 @@ class MemorySymbolicPOGSAgent:
         return path
 
     def _compute_explore_path(self):
-        self.num_explore_paths += 1
+        self.explore_count += 1
 
-        unvisited_nodes = set(self.known_graph.nodes()) - self.visited_nodes
+        unvisited_nodes = set(self.known_graph.nodes()) - self.explored_nodes
         assert len(unvisited_nodes) > 0, "graph should be solvable"
         furthest_unvisited_node, _ = find_furthest_node(self.known_graph, self.current_node, nodes=unvisited_nodes)
 

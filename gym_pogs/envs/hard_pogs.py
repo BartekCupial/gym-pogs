@@ -4,16 +4,16 @@ from gym_pogs.agents.memory_symbolic import MemorySymbolicPOGSAgent
 
 
 class HardPOGS(gym.Wrapper):
-    def __init__(self, env, min_explore_paths: int = 3):
+    def __init__(self, env, min_backtracks: int = 3):
         super().__init__(env)
 
-        self.min_explore_paths = min_explore_paths
+        self.min_backtracks = min_backtracks
         self.agent = MemorySymbolicPOGSAgent()
 
     def reset(self, **kwargs):
-        num_explore_paths = 0
+        backtrack_count = 0
 
-        while num_explore_paths < self.min_explore_paths:
+        while backtrack_count < self.min_backtracks:
             seed = self.np_random.randint(0, 2**32)
 
             self.env.seed(seed)
@@ -25,7 +25,7 @@ class HardPOGS(gym.Wrapper):
                 action = self.agent.act(obs)
                 obs, reward, done, info = super().step(action)
 
-            num_explore_paths = self.agent.num_explore_paths
+            backtrack_count = self.agent.backtrack_count
 
         self.env.seed(seed)
         return super().reset(**kwargs)
