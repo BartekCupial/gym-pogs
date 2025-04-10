@@ -225,3 +225,23 @@ class POGSEnv(gym.Env):
         img = Image.open(buf)
 
         return img
+
+
+class MinDistancePOGS(POGSEnv):
+    def __init__(self, *args, difficulty: int = 7, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.difficulty = difficulty
+        assert self.difficulty <= self.num_nodes / 2
+
+    def _choose_target_node(self):
+        # Ensure target is not the same as start and is reachable
+        nodes = list(self.graph.nodes())
+        possible_targets = [n for n in nodes if n != self.current_node]
+
+        new_target = self.np_random.choice(possible_targets)
+        i = 0
+        while nx.shortest_path_length(self.graph, self.current_node, new_target) <= self.difficulty and i < 100:
+            new_target = self.np_random.choice(possible_targets)
+            i += 1
+
+        return new_target
