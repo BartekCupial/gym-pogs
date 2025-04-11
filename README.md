@@ -48,7 +48,7 @@ default parameters
 ### Render
 image
 
-![image](image.png)
+![image](trajectory.gif)
 
 observation
 ```
