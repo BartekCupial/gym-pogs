@@ -17,9 +17,10 @@ setup(
     keywords="reinforcement learning ai",
     install_requires=[
         "gymnasium ~= 0.29",
-        "networkx",
-        "numpy",
-        "matplotlib",
+        "networkx ~= 3.4",
+        "numpy ~= 1.26",
+        "matplotlib ~= 3.10",
+        "pygame ~= 2.6",
     ],
     extras_require={
         "dev": [
