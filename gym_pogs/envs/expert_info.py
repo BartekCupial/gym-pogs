@@ -219,7 +219,7 @@ class ExpertInfo(gym.Wrapper):
 
         # Reset expert action tracking
         self.expert_matches = 0
-        self.expert_hard_matches = 1
+        self.expert_hard_matches = 0
         self.total_actions = 0
         self.total_hard_actions = 0
 
