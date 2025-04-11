@@ -8,7 +8,7 @@ __all__ = [POGSEnv, HardPOGS]
 
 
 def make_hard_pogs(min_backtracks=3, **kwargs):
-    env = gym.make("POGS-v0", **kwargs)
+    env = POGSEnv(**kwargs)
     return HardPOGS(env, min_backtracks=min_backtracks)
 
 
