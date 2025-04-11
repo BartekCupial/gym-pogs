@@ -1,4 +1,3 @@
-import gymnasium as gym
 from gymnasium.envs.registration import register
 
 from gym_pogs.envs.expert_info import ExpertInfo
@@ -26,13 +25,13 @@ def make_hard_pogs(min_backtracks=3, **kwargs):
 register(
     id="POGS-v0",
     entry_point=make_pogs,
-    max_episode_steps=50,
+    max_episode_steps=None,
     kwargs={},
 )
 
 register(
     id="HardPOGS-v0",
     entry_point=make_hard_pogs,
-    max_episode_steps=50,
+    max_episode_steps=None,
     kwargs={},
 )

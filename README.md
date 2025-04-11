@@ -33,7 +33,7 @@ env.render()
 You can specify:
 1. number of nodes
 2. number of branching points / probability of branching nodes TODO
-3. max_episode_steps
+3. max_steps
 4. k-nearest neighbor observability radius
 5. include cycles Yes / No TODO
 6. undirected 
@@ -41,7 +41,7 @@ You can specify:
 default parameters
 ```
     num_nodes: int = 20, 
-    max_episode_steps: int = 50,
+    max_steps: int = 50,
     k_nearest: int = 3,
 ```
 

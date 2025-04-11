@@ -28,6 +28,7 @@ class POGSEnv(gym.Env):
         k_nearest: int = 3,
         include_cycles: bool = False,
         undirected: bool = True,
+        max_steps: int = 30,
         render_mode: Optional[str] = None,
         screen_size: int | None = 640,
     ):
@@ -58,6 +59,7 @@ class POGSEnv(gym.Env):
         self.k_nearest = k_nearest
         self.include_cycles = include_cycles
         self.undirected = undirected
+        self.max_steps = max_steps
 
         self.action_space = spaces.Discrete(num_nodes)
         self.observation_space = spaces.Dict(
@@ -122,6 +124,7 @@ class POGSEnv(gym.Env):
         self.steps_taken += 1
 
         terminated = False
+        truncated = False
         reward = 0
 
         # Check if action is valid (can only move to connected nodes that are observable)
@@ -140,6 +143,9 @@ class POGSEnv(gym.Env):
                 reward = 100.0  # Big reward for reaching target
                 terminated = True
 
+        if self.steps_taken >= self.max_steps:
+            truncated = True
+
         # Get observation
         observation = self._get_observation()
         info = self._get_info()
@@ -147,7 +153,7 @@ class POGSEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, terminated, truncated, info
 
     def _get_observable_nodes(self):
         """Get the set of nodes that are observable from the current node."""
