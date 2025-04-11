@@ -21,8 +21,8 @@ class HardPOGS(gym.Wrapper):
         while backtrack_count < self.min_backtracks:
             seed = int(self.np_random.integers(0, 2**32))
 
-            obs, info = super().reset(seed=seed, **kwargs)
             self.agent.reset()
+            obs, info = super().reset(seed=seed, **kwargs)
 
             done = False
             while not done:
@@ -32,4 +32,5 @@ class HardPOGS(gym.Wrapper):
 
             backtrack_count = self.agent.backtrack_count
 
+        self.agent.reset()
         return self.env.reset(seed=seed, **kwargs)
