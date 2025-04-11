@@ -1,27 +1,38 @@
 import gymnasium as gym
 from gymnasium.envs.registration import register
 
+from gym_pogs.envs.expert_info import ExpertInfo
 from gym_pogs.envs.hard_pogs import HardPOGS
 from gym_pogs.envs.pogs import POGSEnv
 
 __all__ = [POGSEnv, HardPOGS]
 
 
+def make_pogs(**kwargs):
+    env = POGSEnv(**kwargs)
+    env = ExpertInfo(env)
+
+    return env
+
+
 def make_hard_pogs(min_backtracks=3, **kwargs):
     env = POGSEnv(**kwargs)
-    return HardPOGS(env, min_backtracks=min_backtracks)
+    env = HardPOGS(env, min_backtracks=min_backtracks)
+    env = ExpertInfo(env)
+
+    return env
 
 
 register(
-    id="HardPOGS-v0",
-    entry_point=make_hard_pogs,
+    id="POGS-v0",
+    entry_point=make_pogs,
     max_episode_steps=50,
     kwargs={},
 )
 
 register(
-    id="POGS-v0",
-    entry_point="gym_pogs:POGSEnv",
+    id="HardPOGS-v0",
+    entry_point=make_hard_pogs,
     max_episode_steps=50,
     kwargs={},
 )

@@ -10,11 +10,17 @@ class HardPOGS(gym.Wrapper):
         self.min_backtracks = min_backtracks
         self.agent = MemorySymbolicPOGSAgent(self.env.k_nearest)
 
+        self._original_render_mode = env.render_mode
+
     def reset(self, *, seed=None, **kwargs):
         # Extract seed from kwargs if provided
         if seed is not None:
             # Set the random number generator with the provided seed
             self.np_random, _ = gym.utils.seeding.np_random(seed)
+
+        # Temporarily disable rendering
+        original_render_mode = self.env.render_mode
+        self.env.render_mode = None
 
         backtrack_count = 0
 
@@ -31,6 +37,9 @@ class HardPOGS(gym.Wrapper):
                 done = term or trun
 
             backtrack_count = self.agent.backtrack_count
+
+        # Restore the original render mode
+        self.env.render_mode = original_render_mode
 
         self.agent.reset()
         return self.env.reset(seed=seed, **kwargs)

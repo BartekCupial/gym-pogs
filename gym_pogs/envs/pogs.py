@@ -1,9 +1,11 @@
 import io
+from typing import Optional
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import pygame
 from gymnasium import spaces
 from PIL import Image
 
@@ -11,6 +13,11 @@ from gym_pogs.utils.graph_generator import generate_graph
 
 
 class POGSEnv(gym.Env):
+    metadata = {
+        "render_modes": ["human", "rgb_array"],
+        "render_fps": 10,
+    }
+
     def __init__(
         self,
         num_nodes: int = 20,
@@ -18,6 +25,8 @@ class POGSEnv(gym.Env):
         k_nearest: int = 3,
         include_cycles: bool = False,
         undirected: bool = True,
+        render_mode: Optional[str] = None,
+        screen_size: int | None = 640,
     ):
         """
         Initialize the POGS environment.
@@ -28,11 +37,18 @@ class POGSEnv(gym.Env):
             k_nearest: Observation radius (how many hops away can the agent observe)
             include_cycles: Whether to include cycles in the graph
             undirected: Whether to have directed or undirected graph
+            render_mode: The render mode to use. Options are 'human' and 'rgb_array'
         """
         super().__init__()
 
         assert k_nearest >= 1
         assert num_nodes >= 2
+
+        # Check render mode is valid
+        self.render_mode = render_mode
+
+        if self.render_mode is not None:
+            assert self.render_mode in self.metadata["render_modes"]
 
         self.num_nodes = num_nodes
         self.branching_prob = branching_prob
@@ -49,6 +65,11 @@ class POGSEnv(gym.Env):
                 "edge_list": spaces.Sequence(spaces.Tuple([spaces.Discrete(num_nodes), spaces.Discrete(num_nodes)])),
             }
         )
+
+        self.screen_size = screen_size
+        self.render_size = None
+        self.window = None
+        self.clock = None
 
     def _generate_graph(self):
         # Generate a new graph
@@ -89,6 +110,9 @@ class POGSEnv(gym.Env):
         obs = self._get_observation()
         info = self._get_info()
 
+        if self.render_mode == "human":
+            self.render()
+
         return obs, info
 
     def step(self, action):
@@ -116,6 +140,9 @@ class POGSEnv(gym.Env):
         # Get observation
         observation = self._get_observation()
         info = self._get_info()
+
+        if self.render_mode == "human":
+            self.render()
 
         return observation, reward, terminated, False, info
 
@@ -177,7 +204,7 @@ class POGSEnv(gym.Env):
             "distance_to_target": nx.shortest_path_length(self.graph, self.current_node, self.target_node),
         }
 
-    def render(self, mode="human"):
+    def get_frame(self):
         G = self.graph
 
         # Create a list of node colors
@@ -218,7 +245,48 @@ class POGSEnv(gym.Env):
 
         img_array = np.array(img)
 
-        # Convert to 2D array by averaging the RGB channels (removing alpha)
-        img_2d = img_array[:, :, :3]
+        # Convert to RGB array (removing alpha channel if present)
+        if img_array.shape[2] == 4:
+            img_array = img_array[:, :, :3]
 
-        return img_2d
+        return img_array
+
+    def render(self):
+        img = self.get_frame()
+
+        if self.render_mode == "human":
+            img = np.transpose(img, axes=(1, 0, 2))
+            if self.render_size is None:
+                self.render_size = img.shape[:2]
+            if self.window is None:
+                pygame.init()
+                pygame.display.init()
+                self.window = pygame.display.set_mode((self.screen_size, self.screen_size))
+                pygame.display.set_caption("pogs")
+            if self.clock is None:
+                self.clock = pygame.time.Clock()
+            surf = pygame.surfarray.make_surface(img)
+
+            # Create background with mission description
+            offset = surf.get_size()[0] * 0.1
+            # offset = 32 if self.agent_pov else 64
+            bg = pygame.Surface((int(surf.get_size()[0] + offset), int(surf.get_size()[1] + offset)))
+            bg.convert()
+            bg.fill((255, 255, 255))
+            bg.blit(surf, (offset / 2, 0))
+
+            bg = pygame.transform.smoothscale(bg, (self.screen_size, self.screen_size))
+
+            self.window.blit(bg, (0, 0))
+            pygame.event.pump()
+            self.clock.tick(self.metadata["render_fps"])
+            pygame.display.flip()
+
+        elif self.render_mode == "rgb_array":
+            return img
+        else:
+            raise ValueError(f"Unsupported render mode: {self.render_mode}")
+
+    def close(self):
+        if self.window:
+            pygame.quit()

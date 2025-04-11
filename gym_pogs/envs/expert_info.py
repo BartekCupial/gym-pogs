@@ -6,7 +6,7 @@ import numpy as np
 class ExpertInfo(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)
-        self.radius = self.env.k_nearest
+        self.radius = self.env.unwrapped.k_nearest
 
         self.known_graph: nx.Graph = None
 
@@ -17,17 +17,17 @@ class ExpertInfo(gym.Wrapper):
         adj_matrix = observation["vector"][:-2].reshape(num_nodes, num_nodes)
 
         # Update current node
-        self.previous_node = self.current_node  # Store previous node before updating
+        self.previous_node = self.unwrapped.current_node  # Store previous node before updating
 
         # Check for backtracking
         # If we moved to a previously visited node, that's backtracking
-        if self.current_node in self.visited_nodes and not self.backtracking:
+        if self.unwrapped.current_node in self.visited_nodes and not self.backtracking:
             self.backtrack_count += 1
             self.backtracking = True
-        elif self.current_node not in self.visited_nodes:
+        elif self.unwrapped.current_node not in self.visited_nodes:
             self.backtracking = False
 
-        self.visited_nodes.add(self.current_node)
+        self.visited_nodes.add(self.unwrapped.current_node)
 
         # Add edges from the adjacency matrix to the known graph
         for i in range(num_nodes):
@@ -43,19 +43,21 @@ class ExpertInfo(gym.Wrapper):
     def _update_effectively_explored_nodes(self):
         assert self.radius
 
-        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.unwrapped.current_node)
         effectively_explored_nodes = {node for node, length in path_lengths.items() if length <= self.radius - 1}
         self.explored_nodes.update(effectively_explored_nodes)
 
     def _is_node_within_radius(self, node):
         """Check if a node is within the exploration radius."""
-        return nx.shortest_path_length(self.known_graph, self.current_node, node) <= self.radius - 1
+        return nx.shortest_path_length(self.known_graph, self.unwrapped.current_node, node) <= self.radius - 1
 
     def _compute_target_path(self):
         """Compute the path to the target using the known graph."""
         try:
             # Try to find a path to the target using Dijkstra's algorithm
-            path = nx.shortest_path(self.known_graph, source=self.current_node, target=self.target_node)
+            path = nx.shortest_path(
+                self.known_graph, source=self.unwrapped.current_node, target=self.unwrapped.target_node
+            )
             # Remove the current node from the path
             path = path[1:]
         except (nx.NetworkXNoPath, nx.NodeNotFound):
@@ -68,7 +70,7 @@ class ExpertInfo(gym.Wrapper):
         self.explore_count += 1
 
         # Find nodes that are just outside our exploration radius
-        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.unwrapped.current_node)
 
         # Find nodes that are outside our explored radius but still known
         frontier_nodes = {node for node in self.known_graph.nodes() if node not in self.explored_nodes}
@@ -90,7 +92,7 @@ class ExpertInfo(gym.Wrapper):
         for target in closest_frontier_nodes:
             path = nx.shortest_path(
                 self.known_graph,
-                source=self.current_node,
+                source=self.unwrapped.current_node,
                 target=target,
             )
             # Remove the current node from the path
@@ -125,7 +127,7 @@ class ExpertInfo(gym.Wrapper):
         1. We just now observed a node which before was a frontier node, but now it isn't and it deosn't have neighbors
         """
         # Get nodes that are within our observation radius
-        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.unwrapped.current_node)
         node_degree = nx.degree(self.known_graph)
         effectively_explored_nodes = {node for node, length in path_lengths.items() if length <= self.radius - 1}
         dead_ends = {node for node in effectively_explored_nodes if node_degree[node] == 1}
@@ -146,7 +148,7 @@ class ExpertInfo(gym.Wrapper):
         2. There was a possibility that our agent was exploring other path of the graph
         """
         # If the target is not in the known graph, we haven't discovered it
-        if self.target_node not in self.known_graph:
+        if self.unwrapped.target_node not in self.known_graph:
             return False
 
         # Report target discovery no more then once
@@ -155,13 +157,13 @@ class ExpertInfo(gym.Wrapper):
         self.target_discovered = True
 
         # If we see the target for the first time it should be one of the frontier nodes
-        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.current_node)
+        path_lengths = nx.single_source_shortest_path_length(self.known_graph, self.unwrapped.current_node)
         edge_nodes = {
             node
             for node in self.known_graph.nodes()
             if node not in self.explored_nodes and path_lengths[node] == self.radius
         }
-        assert self.target_node in edge_nodes
+        assert self.unwrapped.target_node in edge_nodes
 
         # If we could detec target accidentally count it as darget discovery
         return len(edge_nodes) > 1
