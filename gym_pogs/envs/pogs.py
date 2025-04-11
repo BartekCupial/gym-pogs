@@ -15,7 +15,6 @@ class POGSEnv(gym.Env):
         self,
         num_nodes: int = 20,
         branching_prob: float = 0.3,
-        episode_horizon: int = 50,
         k_nearest: int = 3,
         include_cycles: bool = False,
         undirected: bool = True,
@@ -26,7 +25,6 @@ class POGSEnv(gym.Env):
         Args:
             num_nodes: Number of nodes in the graph
             branching_prob: Probability of a node being a branching point
-            episode_horizon: Maximum number of steps per episode
             k_nearest: Observation radius (how many hops away can the agent observe)
             include_cycles: Whether to include cycles in the graph
             undirected: Whether to have directed or undirected graph
@@ -38,7 +36,6 @@ class POGSEnv(gym.Env):
 
         self.num_nodes = num_nodes
         self.branching_prob = branching_prob
-        self.episode_horizon = episode_horizon
         self.k_nearest = k_nearest
         self.include_cycles = include_cycles
         self.undirected = undirected

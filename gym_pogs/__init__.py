@@ -15,13 +15,13 @@ def make_hard_pogs(min_backtracks=3, **kwargs):
 register(
     id="HardPOGS-v0",
     entry_point=make_hard_pogs,
-    max_episode_steps=500,
+    max_episode_steps=50,
     kwargs={},
 )
 
 register(
     id="POGS-v0",
     entry_point="gym_pogs:POGSEnv",
-    max_episode_steps=500,
+    max_episode_steps=50,
     kwargs={},
 )

@@ -4,11 +4,12 @@ Partially Observable Graph Search
 
 ## POGS Environment
 
-The goal of the environment is to find and reach the target node in the partially observable graph, given the list of edges, current node and target node. The agent has to plan and systematically explore graph to find the target node.
+The goal of the environment is to find and reach the target node in the partially observable graph, given the information about currently visible part of the graph, current node and target node. The agent has to plan and systematically explore graph to find the target node.
 
 Observation:
-- list of edges
+- adjacency matrix
 - current node, target node
+- list of edges
 
 Action space:
 - label of the node we want to travel to
@@ -18,17 +19,13 @@ Action space:
 Make and initialize an environment
 
 ```
+import gymnasium as gym
+import gym_pogs
+
 env = gym.make("POGS-v0", num_nodes=10, k_nearest=2)
 env.seed(12)
-obs = env.reset()
+obs, info = env.reset()
 env.render()
-```
-
-Get the action space and the observation space
-
-```
-ACTION_SPACE = env.action_space
-OBSERVATION_SPACE = env.observation_space
 ```
 
 ### Customize environments
@@ -36,7 +33,7 @@ OBSERVATION_SPACE = env.observation_space
 You can specify:
 1. number of nodes
 2. number of branching points / probability of branching nodes TODO
-3. episode horizon
+3. max_episode_steps
 4. k-nearest neighbor observability radius
 5. include cycles Yes / No TODO
 6. undirected 
@@ -44,7 +41,7 @@ You can specify:
 default parameters
 ```
     num_nodes: int = 20, 
-    episode_horizon: int = 50,
+    max_episode_steps: int = 50,
     k_nearest: int = 3,
 ```
 
