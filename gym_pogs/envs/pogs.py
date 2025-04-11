@@ -2,6 +2,7 @@ import io
 from typing import Optional
 
 import gymnasium as gym
+import matplotlib
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -10,6 +11,8 @@ from gymnasium import spaces
 from PIL import Image
 
 from gym_pogs.utils.graph_generator import generate_graph
+
+matplotlib.use("Agg")
 
 
 class POGSEnv(gym.Env):
