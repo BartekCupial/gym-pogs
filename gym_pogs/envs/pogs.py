@@ -49,7 +49,7 @@ class POGSEnv(gym.Env):
                 "vector": spaces.Box(low=0, high=1, shape=(num_nodes * num_nodes + 2,), dtype=np.float32),
                 "current_node": spaces.Discrete(num_nodes),
                 "target_node": spaces.Discrete(num_nodes),
-                "edge_list": spaces.MultiDiscrete([num_nodes, num_nodes]),
+                "edge_list": spaces.Sequence(spaces.Tuple([spaces.Discrete(num_nodes), spaces.Discrete(num_nodes)])),
             }
         )
 
