@@ -16,7 +16,7 @@ setup(
     license="MIT",
     keywords="reinforcement learning ai",
     install_requires=[
-        "gym ~= 0.23",
+        "gymnasium ~= 0.29",
         "networkx",
         "numpy",
         "matplotlib",

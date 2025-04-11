@@ -1,10 +1,10 @@
 import io
 
-import gym
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 from PIL import Image
 
 from gym_pogs.utils.graph_generator import generate_graph
@@ -43,8 +43,6 @@ class POGSEnv(gym.Env):
         self.include_cycles = include_cycles
         self.undirected = undirected
 
-        self.np_random = np.random.RandomState()
-
         self.action_space = spaces.Discrete(num_nodes)
         self.observation_space = spaces.Dict(
             {
@@ -55,10 +53,6 @@ class POGSEnv(gym.Env):
             }
         )
 
-    def seed(self, seed):
-        self.np_random.seed(seed)
-        return [seed]
-
     def _generate_graph(self):
         # Generate a new graph
         return generate_graph(
@@ -66,7 +60,7 @@ class POGSEnv(gym.Env):
             branching_prob=self.branching_prob,
             include_cycles=self.include_cycles,
             undirected=self.undirected,
-            seed=self.np_random.randint(0, 2**32),
+            seed=int(self.np_random.integers(0, 2**31 - 1)),
         )
 
     def _choose_current_node(self):
@@ -80,7 +74,9 @@ class POGSEnv(gym.Env):
         possible_targets = [n for n in nodes if n != self.current_node]
         return self.np_random.choice(possible_targets)
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+
         self.graph: nx.Graph = self._generate_graph()
         self.current_node = self._choose_current_node()
         self.target_node = self._choose_target_node()
@@ -93,13 +89,15 @@ class POGSEnv(gym.Env):
 
         # Update observable edges based on current position
         self._update_observable_edges()
+        obs = self._get_observation()
+        info = self._get_info()
 
-        return self._get_observation()
+        return obs, info
 
     def step(self, action):
         self.steps_taken += 1
 
-        done = False
+        terminated = False
         reward = 0
 
         # Check if action is valid (can only move to connected nodes that are observable)
@@ -116,23 +114,13 @@ class POGSEnv(gym.Env):
             # Check if target is reached
             if self.current_node == self.target_node:
                 reward = 100.0  # Big reward for reaching target
-                done = True
-
-        # Check if episode horizon is reached
-        if self.steps_taken >= self.episode_horizon:
-            done = True
+                terminated = True
 
         # Get observation
         observation = self._get_observation()
+        info = self._get_info()
 
-        # Additional info
-        info = {
-            "visited_nodes": len(self.visited_nodes),
-            "steps_taken": self.steps_taken,
-            "distance_to_target": nx.shortest_path_length(self.graph, self.current_node, self.target_node),
-        }
-
-        return observation, reward, done, info
+        return observation, reward, terminated, False, info
 
     def _get_observable_nodes(self):
         """Get the set of nodes that are observable from the current node."""
@@ -183,6 +171,13 @@ class POGSEnv(gym.Env):
             "current_node": self.current_node,
             "target_node": self.target_node,
             "edge_list": edge_list,
+        }
+
+    def _get_info(self):
+        return {
+            "visited_nodes": len(self.visited_nodes),
+            "steps_taken": self.steps_taken,
+            "distance_to_target": nx.shortest_path_length(self.graph, self.current_node, self.target_node),
         }
 
     def render(self, mode="human"):
