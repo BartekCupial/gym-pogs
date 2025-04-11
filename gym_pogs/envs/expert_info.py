@@ -168,6 +168,36 @@ class ExpertInfo(gym.Wrapper):
         # If we could detec target accidentally count it as darget discovery
         return len(edge_nodes) > 1
 
+    def _update_expert_matches(self, action):
+        info = self.last_info["episode_extra_stats"]
+
+        if action in info["expert_action"]:
+            self.expert_matches += 1
+        self.total_actions += 1
+
+        if info["dead_end_discovery"] or info["target_discovery"]:
+            if action in info["expert_action"]:
+                self.expert_hard_matches += 1
+            self.total_hard_actions += 1
+
+    def _expert_accuracy(self):
+        return self.expert_matches / self.total_actions if self.total_actions > 0 else 1
+
+    def _expert_hard_accuracy(self):
+        return self.expert_hard_matches / self.total_hard_actions if self.total_hard_actions > 0 else 1
+
+    def _expert_info(self, info):
+        episode_extra_stats = info.get("episode_extra_stats", {})
+
+        episode_extra_stats["expert_action"] = self._expert_move()
+        episode_extra_stats["target_discovery"] = self._detect_target_discovery()
+        episode_extra_stats["dead_end_discovery"], info["new_dead_ends"] = self._detect_dead_end_discovery()
+        episode_extra_stats["expert_accuracy"] = self._expert_accuracy()
+        episode_extra_stats["expert_hard_accuracy"] = self._expert_hard_accuracy()
+        episode_extra_stats["total_hard_actions"] = self.total_hard_actions
+
+        info["episode_extra_stats"] = episode_extra_stats
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
 
@@ -183,18 +213,19 @@ class ExpertInfo(gym.Wrapper):
         self.target_discovered = False
         self.dead_ends_discovered = set()
 
-        # # Update knowledge with new observation
+        # Update knowledge with new observation
         self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
 
-        expert_action = self._expert_move()
-        target_discovery = self._detect_target_discovery()
-        dead_end_discovery, new_dead_ends = self._detect_dead_end_discovery()
+        # Reset expert action tracking
+        self.expert_matches = 0
+        self.expert_hard_matches = 1
+        self.total_actions = 0
+        self.total_hard_actions = 0
 
-        info["expert_action"] = expert_action
-        info["dead_end_discovery"] = dead_end_discovery
-        info["target_discovery"] = target_discovery
-        info["new_dead_ends"] = new_dead_ends
+        # update info
+        self._expert_info(info)
+        self.last_info = info
 
         return obs, info
 
@@ -205,13 +236,11 @@ class ExpertInfo(gym.Wrapper):
         self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
 
-        expert_action = self._expert_move()
-        target_discovery = self._detect_target_discovery()
-        dead_end_discovery, new_dead_ends = self._detect_dead_end_discovery()
+        # only run this in step
+        self._update_expert_matches(action)
 
-        info["expert_action"] = expert_action
-        info["dead_end_discovery"] = dead_end_discovery
-        info["target_discovery"] = target_discovery
-        info["new_dead_ends"] = new_dead_ends
+        # update info
+        self._expert_info(info)
+        self.last_info = info
 
         return obs, reward, term, trun, info
