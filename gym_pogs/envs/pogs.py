@@ -18,7 +18,7 @@ matplotlib.use("Agg")
 class POGSEnv(gym.Env):
     metadata = {
         "render_modes": ["human", "rgb_array"],
-        "render_fps": 10,
+        "render_fps": 4,
     }
 
     def __init__(
