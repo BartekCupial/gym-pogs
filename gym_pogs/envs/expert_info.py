@@ -13,7 +13,7 @@ class ExpertInfo(gym.Wrapper):
     def _update_known_graph(self, observation):
         """Update the agent's knowledge of the graph based on observation."""
         initial_node_count = self.known_graph.number_of_nodes()
-        gained_knowledge = False  # Flag to track if new nodes are added
+        self.added_nodes = False
 
         # Extract adjacency matrix from the observation vector
         num_nodes = int(np.sqrt(len(observation["vector"]) - 2))
@@ -46,9 +46,7 @@ class ExpertInfo(gym.Wrapper):
         # Check if new nodes were added
         final_node_count = self.known_graph.number_of_nodes()
         if final_node_count > initial_node_count:
-            gained_knowledge = True
-
-        return gained_knowledge
+            self.added_nodes = True
 
     def _update_effectively_explored_nodes(self):
         assert self.radius
@@ -196,7 +194,7 @@ class ExpertInfo(gym.Wrapper):
     def _expert_hard_accuracy(self):
         return self.expert_hard_matches / self.total_hard_actions if self.total_hard_actions > 0 else 1
 
-    def _expert_info(self, info, gained_knowledge: bool = False):
+    def _expert_info(self, info):
         episode_extra_stats = info.get("episode_extra_stats", {})
 
         episode_extra_stats["expert_action"] = self._expert_move()
@@ -205,7 +203,7 @@ class ExpertInfo(gym.Wrapper):
         episode_extra_stats["expert_accuracy"] = self._expert_accuracy()
         episode_extra_stats["expert_hard_accuracy"] = self._expert_hard_accuracy()
         episode_extra_stats["total_hard_actions"] = self.total_hard_actions
-        episode_extra_stats["gained_knowledge"] = gained_knowledge
+        episode_extra_stats["added_nodes"] = self.added_nodes
 
         info["episode_extra_stats"] = episode_extra_stats
 
@@ -225,7 +223,7 @@ class ExpertInfo(gym.Wrapper):
         self.dead_ends_discovered = set()
 
         # Update knowledge with new observation
-        gained_knowledge = self._update_known_graph(obs)
+        self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
 
         # Reset expert action tracking
@@ -235,7 +233,7 @@ class ExpertInfo(gym.Wrapper):
         self.total_hard_actions = 0
 
         # update info
-        self._expert_info(info, gained_knowledge)
+        self._expert_info(info)
         self.last_info = info
 
         return obs, info
@@ -244,14 +242,14 @@ class ExpertInfo(gym.Wrapper):
         obs, reward, term, trun, info = self.env.step(action)
 
         # Update knowledge with new observation
-        gained_knowledge = self._update_known_graph(obs)
+        self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
 
         # only run this in step
         self._update_expert_matches(action)
 
         # update info
-        self._expert_info(info, gained_knowledge)
+        self._expert_info(info)
         self.last_info = info
 
         return obs, reward, term, trun, info
