@@ -184,8 +184,8 @@ class ExpertInfo(gym.Wrapper):
 
         if action in info["expert_action"]:
             self.expert_matches += 1
-        else:
-            print("error: action not in expert action")
+        # else:
+        #     print("error: action not in expert action")
         self.total_actions += 1
 
         if info["dead_end_discovery"] or info["target_discovery"]:
