@@ -4,9 +4,12 @@ import numpy as np
 
 
 class ExpertInfo(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, expert_penalty: float = -1):
         super().__init__(env)
+        assert expert_penalty <= 0, "expert_penalty must be <= 0"
+
         self.radius = self.env.unwrapped.k_nearest
+        self.expert_penalty = expert_penalty
 
         self.known_graph: nx.Graph = None
 
@@ -181,6 +184,8 @@ class ExpertInfo(gym.Wrapper):
 
         if action in info["expert_action"]:
             self.expert_matches += 1
+        else:
+            print("error: action not in expert action")
         self.total_actions += 1
 
         if info["dead_end_discovery"] or info["target_discovery"]:
@@ -251,5 +256,7 @@ class ExpertInfo(gym.Wrapper):
         # update info
         self._expert_info(info)
         self.last_info = info
+
+        reward += 0 if action in info["episode_extra_stats"]["expert_action"] else self.expert_penalty
 
         return obs, reward, term, trun, info

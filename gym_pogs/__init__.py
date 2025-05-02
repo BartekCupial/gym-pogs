@@ -7,17 +7,17 @@ from gym_pogs.envs.pogs import POGSEnv
 __all__ = [POGSEnv, HardPOGS]
 
 
-def make_pogs(**kwargs):
+def make_pogs(expert_penalty=-1, **kwargs):
     env = POGSEnv(**kwargs)
     env = ExpertInfo(env)
 
     return env
 
 
-def make_hard_pogs(min_backtracks=3, **kwargs):
+def make_hard_pogs(expert_penalty=-1, min_backtracks=3, **kwargs):
     env = POGSEnv(**kwargs)
     env = HardPOGS(env, min_backtracks=min_backtracks)
-    env = ExpertInfo(env)
+    env = ExpertInfo(env, expert_penalty=expert_penalty)
 
     return env
 

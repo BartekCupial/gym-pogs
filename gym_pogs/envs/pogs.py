@@ -26,6 +26,8 @@ class POGSEnv(gym.Env):
         num_nodes: int = 20,
         branching_prob: float = 0.3,
         k_nearest: int = 3,
+        step_penalty: float = 0.0,
+        revisit_penalty: float = 0.0,
         include_cycles: bool = False,
         undirected: bool = True,
         max_steps: int = 30,
@@ -36,17 +38,23 @@ class POGSEnv(gym.Env):
         Initialize the POGS environment.
 
         Args:
-            num_nodes: Number of nodes in the graph
-            branching_prob: Probability of a node being a branching point
-            k_nearest: Observation radius (how many hops away can the agent observe)
-            include_cycles: Whether to include cycles in the graph
-            undirected: Whether to have directed or undirected graph
-            render_mode: The render mode to use. Options are 'human' and 'rgb_array'
+            num_nodes (int): The number of nodes in the graph. Must be at least 2. Default is 20.
+            branching_prob (float): The probability of branching when generating the graph. Default is 0.3.
+            k_nearest (int): The number of nearest neighbors to connect in the graph. Must be at least 1. Default is 3.
+            step_penalty (float): The penalty for taking a step. Must be non-positive. Default is 0.0.
+            revisit_penalty (float): The penalty for revisiting a node. Must be non-positive. Default is 0.0.
+            include_cycles (bool): Whether to include cycles in the graph. Default is False.
+            undirected (bool): Whether the graph is undirected. Default is True.
+            max_steps (int): The maximum number of steps allowed in the environment. Default is 30.
+            render_mode (Optional[str]): The mode for rendering the environment. Must be one of the modes in `self.metadata["render_modes"]` if specified. Default is None.
+            screen_size (int | None): The size of the screen for rendering. Default is 640.
         """
         super().__init__()
 
         assert k_nearest >= 1
         assert num_nodes >= 2
+        assert revisit_penalty <= 0, "Revisit penalty should be non-positive"
+        assert step_penalty <= 0, "Step penalty should be non-positive"
 
         # Check render mode is valid
         self.render_mode = render_mode
@@ -57,6 +65,8 @@ class POGSEnv(gym.Env):
         self.num_nodes = num_nodes
         self.branching_prob = branching_prob
         self.k_nearest = k_nearest
+        self.step_penalty = step_penalty
+        self.revisit_penalty = revisit_penalty
         self.include_cycles = include_cycles
         self.undirected = undirected
         self.max_steps = max_steps
@@ -125,12 +135,18 @@ class POGSEnv(gym.Env):
 
         terminated = False
         truncated = False
-        reward = 0
 
-        # Check if action is valid (can only move to connected nodes that are observable)
-        if action not in self.graph.neighbors(self.current_node):
-            reward = -1.0  # Penalty for invalid move
-        else:
+        # --- Action Validation and State Update ---
+        is_valid_action = action in self.graph.neighbors(self.current_node)
+        # Determine the node after the action (or attempted action)
+        # And whether the target is reached as a result of a *valid* action
+        is_target_reached = False
+        was_revisited = False  # Flag to track if the next node was already visited
+
+        if is_valid_action:
+            # Check for revisit *before* updating visited_nodes
+            was_revisited = action in self.visited_nodes
+
             # Move to the selected node
             self.current_node = action
             self.visited_nodes.add(self.current_node)
@@ -139,17 +155,26 @@ class POGSEnv(gym.Env):
             self._update_observable_edges()
 
             # Check if target is reached
-            if self.current_node == self.target_node:
-                reward = 100.0  # Big reward for reaching target
+            is_target_reached = self.current_node == self.target_node
+            if is_target_reached:
                 terminated = True
+        # else: Action was invalid, state remains the same, is_target_reached is False
+        #       next_node remains the previous node, is_target_reached is False, was_revisited is False
 
+        # --- Calculate Reward ---
+        reward = self._reward_fn(
+            is_valid_action=is_valid_action, is_target_reached=is_target_reached, was_revisited=was_revisited
+        )
+
+        # --- Check Truncation ---
         if self.steps_taken >= self.max_steps:
             truncated = True
 
-        # Get observation
+        # --- Get Observation and Info ---
         observation = self._get_observation()
         info = self._get_info()
 
+        # --- Render ---
         if self.render_mode == "human":
             self.render()
 
@@ -174,6 +199,21 @@ class POGSEnv(gym.Env):
             if u in observable_nodes and v in observable_nodes:
                 self.observable_edges.add((u, v))
                 self.observable_edges.add((v, u))  # Add both directions
+
+    def _reward_fn(self, is_valid_action, is_target_reached, was_revisited):
+        if not is_valid_action:
+            return -1.0  # Penalty for invalid move (keep this relatively high penalty)
+
+        if is_target_reached:
+            return 100.0  # Big reward for reaching target
+
+        # If it's a valid move but not the target:
+        reward = self.step_penalty  # Apply the standard penalty for taking a step
+
+        if was_revisited:
+            reward += self.revisit_penalty  # Add the (negative) penalty for revisiting
+
+        return reward
 
     def _get_observation(self):
         """
