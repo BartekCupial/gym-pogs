@@ -128,7 +128,7 @@ class ExpertInfo(gym.Wrapper):
         for path in paths_to_explore:
             expert_action.add(path[0])
 
-        return expert_action
+        return list(expert_action)
 
     def _detect_dead_end_discovery(self):
         """
