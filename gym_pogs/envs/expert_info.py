@@ -246,6 +246,8 @@ class ExpertInfo(gym.Wrapper):
     def step(self, action):
         obs, reward, term, trun, info = self.env.step(action)
 
+        reward += 0 if action in self.last_info["episode_extra_stats"]["expert_action"] else self.expert_penalty
+    
         # Update knowledge with new observation
         self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
@@ -256,7 +258,5 @@ class ExpertInfo(gym.Wrapper):
         # update info
         self._expert_info(info)
         self.last_info = info
-
-        reward += 0 if action in info["episode_extra_stats"]["expert_action"] else self.expert_penalty
 
         return obs, reward, term, trun, info
