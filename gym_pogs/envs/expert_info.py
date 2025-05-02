@@ -148,7 +148,7 @@ class ExpertInfo(gym.Wrapper):
         self.dead_ends_discovered.update(new_dead_ends)
 
         # Return True if we found any new dead ends
-        return len(new_dead_ends) > 0, new_dead_ends
+        return len(new_dead_ends) > 0, list(new_dead_ends)
 
     def _detect_target_discovery(self):
         """
