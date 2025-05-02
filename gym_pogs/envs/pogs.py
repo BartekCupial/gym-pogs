@@ -118,10 +118,7 @@ class POGSEnv(gym.Env):
         # Reset step counter and visited nodes
         self.steps_taken = 0
         self.visited_nodes = {self.current_node}
-        self.observable_edges = set()
 
-        # Update observable edges based on current position
-        self._update_observable_edges()
         obs = self._get_observation()
         info = self._get_info()
 
@@ -150,9 +147,6 @@ class POGSEnv(gym.Env):
             # Move to the selected node
             self.current_node = action
             self.visited_nodes.add(self.current_node)
-
-            # Update observable edges
-            self._update_observable_edges()
 
             # Check if target is reached
             is_target_reached = self.current_node == self.target_node
@@ -190,15 +184,17 @@ class POGSEnv(gym.Env):
 
         return observable_nodes
 
-    def _update_observable_edges(self):
+    def _get_observable_edges(self):
         """Update the set of edges that are observable from the current position."""
+        observable_edges = set()
         observable_nodes = self._get_observable_nodes()
-
         # Add edges between observable nodes
         for u, v in self.graph.edges():
             if u in observable_nodes and v in observable_nodes:
-                self.observable_edges.add((u, v))
-                self.observable_edges.add((v, u))  # Add both directions
+                observable_edges.add((u, v))
+                observable_edges.add((v, u))  # Add both directions
+
+        return observable_edges
 
     def _reward_fn(self, is_valid_action, is_target_reached, was_revisited):
         if not is_valid_action:
@@ -225,7 +221,8 @@ class POGSEnv(gym.Env):
         # Create adjacency matrix for observable edges
         adj_matrix = np.zeros((self.num_nodes, self.num_nodes), dtype=np.float32)
 
-        for u, v in self.observable_edges:
+        observable_edges = self._get_observable_edges()
+        for u, v in observable_edges:
             adj_matrix[u, v] = 1.0
 
         # Flatten the adjacency matrix and add current and target nodes
@@ -234,7 +231,7 @@ class POGSEnv(gym.Env):
         )
 
         # Create edge list representation
-        edge_list = list(self.observable_edges)
+        edge_list = list(observable_edges)
 
         if self.undirected:
             edge_list = set(map(tuple, map(sorted, edge_list)))
