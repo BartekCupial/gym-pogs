@@ -201,7 +201,7 @@ class ExpertInfo(gym.Wrapper):
 
     def _expert_info(self, info):
         episode_extra_stats = info.get("episode_extra_stats", {})
-
+        
         episode_extra_stats["expert_action"] = self._expert_move()
         episode_extra_stats["target_discovery"] = self._detect_target_discovery()
         episode_extra_stats["dead_end_discovery"], info["new_dead_ends"] = self._detect_dead_end_discovery()
@@ -209,6 +209,7 @@ class ExpertInfo(gym.Wrapper):
         episode_extra_stats["expert_hard_accuracy"] = self._expert_hard_accuracy()
         episode_extra_stats["total_hard_actions"] = self.total_hard_actions
         episode_extra_stats["added_nodes"] = self.added_nodes
+        episode_extra_stats["backtrack_count"] = self.backtrack_count
 
         info["episode_extra_stats"] = episode_extra_stats
 
