@@ -22,16 +22,22 @@ class ExpertInfo(gym.Wrapper):
         num_nodes = int(np.sqrt(len(observation["vector"]) - 2))
         adj_matrix = observation["vector"][:-2].reshape(num_nodes, num_nodes)
 
+        if len(self.history) > 1 and self.unwrapped.current_node == self.history[-2]:
+            self.backtrack_count += 1
+
+        if self.previous_node is not None or self.previous_node != self.unwrapped.current_node:
+            self.history.append(self.unwrapped.current_node)
+
         # Update current node
         self.previous_node = self.unwrapped.current_node  # Store previous node before updating
 
         # Check for backtracking
         # If we moved to a previously visited node, that's backtracking
-        if self.unwrapped.current_node in self.visited_nodes and not self.backtracking:
-            self.backtrack_count += 1
-            self.backtracking = True
-        elif self.unwrapped.current_node not in self.visited_nodes:
-            self.backtracking = False
+        # if self.unwrapped.current_node in self.visited_nodes and not self.backtracking:
+        #     self.backtrack_count += 1
+        #     self.backtracking = True
+        # elif self.unwrapped.current_node not in self.visited_nodes:
+        #     self.backtracking = False
 
         self.visited_nodes.add(self.unwrapped.current_node)
 
@@ -201,7 +207,7 @@ class ExpertInfo(gym.Wrapper):
 
     def _expert_info(self, info):
         episode_extra_stats = info.get("episode_extra_stats", {})
-        
+
         episode_extra_stats["expert_action"] = self._expert_move()
         episode_extra_stats["target_discovery"] = self._detect_target_discovery()
         episode_extra_stats["dead_end_discovery"], info["new_dead_ends"] = self._detect_dead_end_discovery()
@@ -227,6 +233,7 @@ class ExpertInfo(gym.Wrapper):
 
         self.target_discovered = False
         self.dead_ends_discovered = set()
+        self.history = []
 
         # Update knowledge with new observation
         self._update_known_graph(obs)
@@ -248,7 +255,7 @@ class ExpertInfo(gym.Wrapper):
         obs, reward, term, trun, info = self.env.step(action)
 
         reward += 0 if action in self.last_info["episode_extra_stats"]["expert_action"] else self.expert_penalty
-    
+
         # Update knowledge with new observation
         self._update_known_graph(obs)
         self._update_effectively_explored_nodes()
