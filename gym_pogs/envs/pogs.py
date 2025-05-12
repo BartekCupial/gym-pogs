@@ -263,20 +263,20 @@ class POGSEnv(gym.Env):
 
         # Draw observable nodes with bigger gray circles
         observable_nodes = self._get_observable_nodes()
-        nx.draw_networkx_nodes(G, self.pos, nodelist=observable_nodes, node_color="#FFD700", node_size=1500, alpha=0.3)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=observable_nodes, node_color="#00ff00", node_size=2500)
 
         # Draw all nodes
-        nx.draw_networkx_nodes(G, self.pos, node_color="black", node_size=500)
+        nx.draw_networkx_nodes(G, self.pos, node_color="black", node_size=1500)
 
         # Draw target and current nodes
-        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.target_node], node_color="blue", node_size=500)
-        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.current_node], node_color="red", node_size=500)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.target_node], node_color="blue", node_size=1500)
+        nx.draw_networkx_nodes(G, self.pos, nodelist=[self.current_node], node_color="red", node_size=1500)
 
         # Draw edges
         nx.draw_networkx_edges(G, self.pos)
 
         # Draw labels
-        nx.draw_networkx_labels(G, self.pos, font_color="white", font_weight="bold")
+        nx.draw_networkx_labels(G, self.pos, font_color="white", font_weight="bold", font_size=24)
 
         plt.tight_layout()
 
