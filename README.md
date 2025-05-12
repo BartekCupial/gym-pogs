@@ -22,9 +22,8 @@ Make and initialize an environment
 import gymnasium as gym
 import gym_pogs
 
-env = gym.make("POGS-v0", num_nodes=10, k_nearest=2)
-env.seed(12)
-obs, info = env.reset()
+env = gym.make("HardPOGS-v0", num_nodes=20, k_nearest=2, max_steps=30, min_backtracks=2)
+obs, info = env.reset(seed=20)
 env.render()
 ```
 
@@ -32,36 +31,45 @@ env.render()
 
 You can specify:
 1. number of nodes
-2. number of branching points / probability of branching nodes TODO
-3. max_steps
-4. k-nearest neighbor observability radius
-5. include cycles Yes / No TODO
-6. undirected 
-
-default parameters
-```
-    num_nodes: int = 20, 
-    max_steps: int = 50,
-    k_nearest: int = 3,
-```
+2. max_steps
+3. k-nearest neighbor observability radius
+4. min_backtracks for `HardPOGS-v0`
 
 ### Render
 image
 
 ![image](trajectory.gif)
 
-observation
+### Image description
+
+Very easy to convert observation to text. For example to give it to LLMs:
+
+```python
+def get_text_observation(obs):
+    num_nodes = int(np.sqrt(len(obs["vector"]) - 2))
+    adj_matrix = obs["vector"][:-2].reshape(num_nodes, num_nodes)
+    description = ""
+    for i, row in enumerate(adj_matrix):
+        if any(row):
+            neigbhors = row.nonzero()[0].tolist()
+            description += f"node: {i}, neighbors: {neigbhors}\n"
+
+    obsv = f"{description}\ncurrent node: {obs['current_node']}, target node: {obs['target_node']}"
+
+    return obsv
+
+print(get_text_observation(obs))
 ```
-{'vector': array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-        0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.,
-        0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-        0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-        0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 0., 1., 0., 0., 0., 6., 1.],
-       dtype=float32),
- 'current_node': np.int64(6),
- 'target_node': np.int64(1),
- 'edge_list': {(3, 9), (4, 9), (6, 9)}}
+
+```
+node: 2, neighbors: [4, 16]
+node: 3, neighbors: [5, 7, 16]
+node: 4, neighbors: [2]
+node: 5, neighbors: [3]
+node: 7, neighbors: [3]
+node: 16, neighbors: [2, 3]
+
+current node: 16, target node: 11
 ```
 
 ### Installation 
